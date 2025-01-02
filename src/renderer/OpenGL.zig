@@ -22,6 +22,7 @@ const Terminal = terminal.Terminal;
 const gl = @import("opengl");
 const math = @import("../math.zig");
 const Surface = @import("../Surface.zig");
+const win32 = @import("zigwin32").everything;
 
 const CellProgram = @import("opengl/CellProgram.zig");
 const ImageProgram = @import("opengl/ImageProgram.zig");
@@ -470,6 +471,8 @@ pub fn surfaceInit(surface: *apprt.Surface) !void {
 
         apprt.glfw => try self.threadEnter(surface),
 
+        apprt.win32 => {},
+
         apprt.embedded => {
             // TODO(mitchellh): this does nothing today to allow libghostty
             // to compile for OpenGL targets but libghostty is strictly
@@ -584,6 +587,8 @@ pub fn threadEnter(self: *const OpenGL, surface: *apprt.Surface) !void {
             });
         },
 
+        apprt.win32 => {},
+
         apprt.embedded => {
             // TODO(mitchellh): this does nothing today to allow libghostty
             // to compile for OpenGL targets but libghostty is strictly
@@ -608,6 +613,8 @@ pub fn threadExit(self: *const OpenGL) void {
             gl.glad.unload();
             glfw.makeContextCurrent(null);
         },
+
+        apprt.win32 => {},
 
         apprt.embedded => {
             // TODO: see threadEnter
@@ -2330,8 +2337,18 @@ pub fn drawFrame(self: *OpenGL, surface: *apprt.Surface) !void {
     // Swap our window buffers
     switch (apprt.runtime) {
         apprt.glfw => surface.window.swapBuffers(),
-        apprt.gtk => {},
-        apprt.embedded => {},
+        apprt.gtk => {},        
+        apprt.win32 => {
+            if (0 == win32.wglSwapLayerBuffers(
+                surface.hdc,
+                win32.WGL_SWAP_MAIN_PLANE,
+            )) {
+                std.debug.panic(
+                    "wglSwapLayerBuffers failed, error={s}",
+                    .{@tagName(win32.GetLastError())},
+                );
+            }
+        },        apprt.embedded => {},
         else => @compileError("unsupported runtime"),
     }
 }

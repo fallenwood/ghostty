@@ -390,6 +390,7 @@ pub fn build(b: *std.Build) !void {
 
         if (target.result.os.tag == .windows) {
             exe.subsystem = .Windows;
+            exe.addIncludePath(b.path("dist/windows/inc"));
             exe.addWin32ResourceFile(.{
                 .file = b.path("dist/windows/ghostty.rc"),
             });
@@ -1381,6 +1382,12 @@ fn addDeps(
         }
     }
 
+    // // Win32
+    // if (step.rootModuleTarget().os.tag == .windows) {
+    //     const zigwin32_dep = b.dependency("zigwin32", .{});
+    //     step.root_module.addImport("zigwin32", zigwin32_dep.module("zigwin32"));
+    // }
+
     // cimgui
     const cimgui_dep = b.dependency("cimgui", .{
         .target = target,
@@ -1428,6 +1435,11 @@ fn addDeps(
                     .optimize = optimize,
                 }) orelse break :glfw;
                 step.root_module.addImport("glfw", mach_glfw_dep.module("mach-glfw"));
+            },
+
+            .win32 => {                
+                const zigwin32_dep = b.dependency("zigwin32", .{});
+                step.root_module.addImport("zigwin32", zigwin32_dep.module("zigwin32"));
             },
 
             .gtk => {
