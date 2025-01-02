@@ -182,11 +182,11 @@ pub fn init(core_app: *CoreApp, opts: Options) !App {
     };
 
     // Setup the flags for our application.
-    const app_flags: c.GApplicationFlags = app_flags: {
-        var flags: c.GApplicationFlags = c.G_APPLICATION_DEFAULT_FLAGS;
-        if (!single_instance) flags |= c.G_APPLICATION_NON_UNIQUE;
-        break :app_flags flags;
-    };
+    // const app_flags: c.GApplicationFlags = app_flags: {
+    //     var flags: c.GApplicationFlags = c.G_APPLICATION_DEFAULT_FLAGS;
+    //     if (!single_instance) flags |= c.G_APPLICATION_NON_UNIQUE;
+    //     break :app_flags flags;
+    // };
 
     // Our app ID determines uniqueness and maps to our desktop file.
     // We append "-debug" to the ID if we're in debug mode so that we
@@ -205,103 +205,127 @@ pub fn init(core_app: *CoreApp, opts: Options) !App {
     };
 
     // Create our GTK Application which encapsulates our process.
-    const app: *c.GtkApplication = app: {
-        log.debug("creating GTK application id={s} single-instance={} adwaita={}", .{
+    var app: *c.GtkApplication = app: {
+        log.info("creating GTK application id={s} single-instance={} adwaita={}", .{
             app_id,
             single_instance,
             adwaita,
         });
 
-        // If not libadwaita, create a standard GTK application.
-        if ((comptime !adwaita.versionAtLeast(0, 0, 0)) or
-            !adwaita.enabled(&config))
-        {
-            {
-                const provider = c.gtk_css_provider_new();
-                defer c.g_object_unref(provider);
-                switch (config.@"window-theme") {
-                    .system, .light => {},
-                    .dark => {
-                        const settings = c.gtk_settings_get_default();
-                        c.g_object_set(@ptrCast(@alignCast(settings)), "gtk-application-prefer-dark-theme", true, @as([*c]const u8, null));
-
-                        c.gtk_css_provider_load_from_resource(
-                            provider,
-                            "/com/mitchellh/ghostty/style-dark.css",
-                        );
-                        c.gtk_style_context_add_provider_for_display(
-                            display,
-                            @ptrCast(provider),
-                            c.GTK_STYLE_PROVIDER_PRIORITY_APPLICATION + 2,
-                        );
-                    },
-                    .auto, .ghostty => {
-                        const lum = config.background.toTerminalRGB().perceivedLuminance();
-                        if (lum <= 0.5) {
-                            const settings = c.gtk_settings_get_default();
-                            c.g_object_set(@ptrCast(@alignCast(settings)), "gtk-application-prefer-dark-theme", true, @as([*c]const u8, null));
-
-                            c.gtk_css_provider_load_from_resource(
-                                provider,
-                                "/com/mitchellh/ghostty/style-dark.css",
-                            );
-                            c.gtk_style_context_add_provider_for_display(
-                                display,
-                                @ptrCast(provider),
-                                c.GTK_STYLE_PROVIDER_PRIORITY_APPLICATION + 2,
-                            );
-                        }
-                    },
-                }
-            }
-
-            {
-                const provider = c.gtk_css_provider_new();
-                defer c.g_object_unref(provider);
-
-                c.gtk_css_provider_load_from_resource(provider, "/com/mitchellh/ghostty/style.css");
-                c.gtk_style_context_add_provider_for_display(
-                    display,
-                    @ptrCast(provider),
-                    c.GTK_STYLE_PROVIDER_PRIORITY_APPLICATION + 1,
-                );
-            }
-
-            break :app @as(?*c.GtkApplication, @ptrCast(c.gtk_application_new(
-                app_id.ptr,
-                app_flags,
-            ))) orelse return error.GtkInitFailed;
-        }
-
-        // Use libadwaita if requested. Using an AdwApplication lets us use
-        // Adwaita widgets and access things such as the color scheme.
-        const adw_app = @as(?*c.AdwApplication, @ptrCast(c.adw_application_new(
+        const gtk_application = c.gtk_application_new(
             app_id.ptr,
-            app_flags,
-        ))) orelse return error.GtkInitFailed;
-
-        const style_manager = c.adw_application_get_style_manager(adw_app);
-        c.adw_style_manager_set_color_scheme(
-            style_manager,
-            switch (config.@"window-theme") {
-                .auto, .ghostty => auto: {
-                    const lum = config.background.toTerminalRGB().perceivedLuminance();
-                    break :auto if (lum > 0.5)
-                        c.ADW_COLOR_SCHEME_PREFER_LIGHT
-                    else
-                        c.ADW_COLOR_SCHEME_PREFER_DARK;
-                },
-
-                .system => c.ADW_COLOR_SCHEME_PREFER_LIGHT,
-                .dark => c.ADW_COLOR_SCHEME_FORCE_DARK,
-                .light => c.ADW_COLOR_SCHEME_FORCE_LIGHT,
-            },
+            0,
         );
 
-        break :app @ptrCast(adw_app);
+        const gtk_application_as = @as(?*c.GtkApplication, @ptrCast(gtk_application));
+
+        log.info("gtk_application={any} gtk_application_as={any}", .{
+            gtk_application,
+            gtk_application_as,
+        });
+
+        break :app gtk_application_as orelse return error.GtkInitFailed;
+
+        // // If not libadwaita, create a standard GTK application.
+        // if ((comptime !adwaita.versionAtLeast(0, 0, 0)) or
+        //     !adwaita.enabled(&config))
+        // {
+        //     {
+        //         const provider = c.gtk_css_provider_new();
+        //         defer c.g_object_unref(provider);
+        //         switch (config.@"window-theme") {
+        //             .system, .light => {},
+        //             .dark => {
+        //                 const settings = c.gtk_settings_get_default();
+        //                 c.g_object_set(@ptrCast(@alignCast(settings)), "gtk-application-prefer-dark-theme", true, @as([*c]const u8, null));
+// 
+        //                 c.gtk_css_provider_load_from_resource(
+        //                     provider,
+        //                     "/com/mitchellh/ghostty/style-dark.css",
+        //                 );
+        //                 c.gtk_style_context_add_provider_for_display(
+        //                     display,
+        //                     @ptrCast(provider),
+        //                     c.GTK_STYLE_PROVIDER_PRIORITY_APPLICATION + 2,
+        //                 );
+        //             },
+        //             .auto, .ghostty => {
+        //                 const lum = config.background.toTerminalRGB().perceivedLuminance();
+        //                 if (lum <= 0.5) {
+        //                     const settings = c.gtk_settings_get_default();
+        //                     c.g_object_set(@ptrCast(@alignCast(settings)), "gtk-application-prefer-dark-theme", true, @as([*c]const u8, null));
+// 
+        //                     c.gtk_css_provider_load_from_resource(
+        //                         provider,
+        //                         "/com/mitchellh/ghostty/style-dark.css",
+        //                     );
+        //                     c.gtk_style_context_add_provider_for_display(
+        //                         display,
+        //                         @ptrCast(provider),
+        //                         c.GTK_STYLE_PROVIDER_PRIORITY_APPLICATION + 2,
+        //                     );
+        //                 }
+        //             },
+        //         }
+        //     }
+// 
+        //     {
+        //         const provider = c.gtk_css_provider_new();
+        //         defer c.g_object_unref(provider);
+// 
+        //         c.gtk_css_provider_load_from_resource(provider, "/com/mitchellh/ghostty/style.css");
+        //         c.gtk_style_context_add_provider_for_display(
+        //             display,
+        //             @ptrCast(provider),
+        //             c.GTK_STYLE_PROVIDER_PRIORITY_APPLICATION + 1,
+        //         );
+        //     }
+// 
+        //     break :app @as(?*c.GtkApplication, @ptrCast(c.gtk_application_new(
+        //         app_id.ptr,
+        //         app_flags,
+        //     ))) orelse return error.GtkInitFailed;
+        // }
+// 
+        // // Use libadwaita if requested. Using an AdwApplication lets us use
+        // // Adwaita widgets and access things such as the color scheme.
+        // const adw_app = @as(?*c.AdwApplication, @ptrCast(c.adw_application_new(
+        //     app_id.ptr,
+        //     app_flags,
+        // ))) orelse return error.GtkInitFailed;
+// 
+        // const style_manager = c.adw_application_get_style_manager(adw_app);
+        // c.adw_style_manager_set_color_scheme(
+        //     style_manager,
+        //     switch (config.@"window-theme") {
+        //         .auto, .ghostty => auto: {
+        //             const lum = config.background.toTerminalRGB().perceivedLuminance();
+        //             break :auto if (lum > 0.5)
+        //                 c.ADW_COLOR_SCHEME_PREFER_LIGHT
+        //             else
+        //                 c.ADW_COLOR_SCHEME_PREFER_DARK;
+        //         },
+// 
+        //         .system => c.ADW_COLOR_SCHEME_PREFER_LIGHT,
+        //         .dark => c.ADW_COLOR_SCHEME_FORCE_DARK,
+        //         .light => c.ADW_COLOR_SCHEME_FORCE_LIGHT,
+        //     },
+        // );
+// 
+        // break :app @ptrCast(adw_app);
     };
+    app = c.gtk_application_new(
+        "org.gtk.example",
+        0,
+    );
     errdefer c.g_object_unref(app);
     const gapp = @as(*c.GApplication, @ptrCast(app));
+
+    log.info("app={any} gapp={any}, gtype={any}", .{
+        app,
+        gapp,
+        app.*.parent_instance.parent_instance.g_type_instance.g_class.*.g_type,
+    });
 
     // force the resource path to a known value so that it doesn't depend on
     // the app id and load in compiled resources

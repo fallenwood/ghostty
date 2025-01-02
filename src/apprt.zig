@@ -73,7 +73,7 @@ pub const Runtime = enum {
         if (target.os.tag == .linux) return .gtk;
 
         // Windows we currently only support glfw
-        if (target.os.tag == .windows) return .glfw;
+        if (target.os.tag == .windows) return .gtk;
 
         // Otherwise, we do NONE so we don't create an exe. The GLFW
         // build is opt-in because it is missing so many features compared

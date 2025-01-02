@@ -1103,6 +1103,84 @@ fn addDeps(
         .search_strategy = .mode_first,
     };
 
+    step.root_module.addIncludePath(.{ .cwd_relative = "C:/Programs/msys64/clang64/include" });
+
+    step.root_module.addLibraryPath(.{ .cwd_relative = "C:/Programs/msys64/clang64/lib" });
+    step.linkSystemLibrary2("gtk-4", dynamic_link_opts);
+    step.linkSystemLibrary2("pangocairo-1.0", dynamic_link_opts);
+    step.linkSystemLibrary2("gdi32", dynamic_link_opts);
+    step.linkSystemLibrary2("pangoft2-1.0", dynamic_link_opts);
+    step.linkSystemLibrary2("pangowin32-1.0", dynamic_link_opts);
+    step.linkSystemLibrary2("gdi32", dynamic_link_opts);
+    step.linkSystemLibrary2("dwrite", dynamic_link_opts);
+    step.linkSystemLibrary2("pango-1.0", dynamic_link_opts);
+    step.linkSystemLibrary2("fribidi", dynamic_link_opts);
+    step.linkSystemLibrary2("thai", dynamic_link_opts);
+    step.linkSystemLibrary2("datrie", dynamic_link_opts);
+    step.linkSystemLibrary2("harfbuzz-gobject", dynamic_link_opts);
+    step.linkSystemLibrary2("gdk_pixbuf-2.0", dynamic_link_opts);
+    step.linkSystemLibrary2("intl", dynamic_link_opts);
+    step.linkSystemLibrary2("gdiplus", dynamic_link_opts);
+    step.linkSystemLibrary2("ole32", dynamic_link_opts);
+    step.linkSystemLibrary2("tiff", dynamic_link_opts);
+    step.linkSystemLibrary2("jbig", dynamic_link_opts);
+    step.linkSystemLibrary2("z", dynamic_link_opts);
+    step.linkSystemLibrary2("webp", dynamic_link_opts);
+    step.linkSystemLibrary2("sharpyuv", dynamic_link_opts);
+    step.linkSystemLibrary2("zstd", dynamic_link_opts);
+    step.linkSystemLibrary2("lzma", dynamic_link_opts);
+    step.linkSystemLibrary2("Lerc", dynamic_link_opts);
+    step.linkSystemLibrary2("jpeg", dynamic_link_opts);
+    step.linkSystemLibrary2("deflate", dynamic_link_opts);
+    step.linkSystemLibrary2("cairo-gobject", dynamic_link_opts);
+    step.linkSystemLibrary2("gdi32", dynamic_link_opts);
+    step.linkSystemLibrary2("msimg32", dynamic_link_opts);
+    step.linkSystemLibrary2("dwrite", dynamic_link_opts);
+    step.linkSystemLibrary2("d2d1", dynamic_link_opts);
+    step.linkSystemLibrary2("windowscodecs", dynamic_link_opts);
+    step.linkSystemLibrary2("cairo", dynamic_link_opts);
+    step.linkSystemLibrary2("gdi32", dynamic_link_opts);
+    step.linkSystemLibrary2("msimg32", dynamic_link_opts);
+    step.linkSystemLibrary2("dwrite", dynamic_link_opts);
+    step.linkSystemLibrary2("d2d1", dynamic_link_opts);
+    step.linkSystemLibrary2("windowscodecs", dynamic_link_opts);
+    step.linkSystemLibrary2("fontconfig", dynamic_link_opts);
+    step.linkSystemLibrary2("expat", dynamic_link_opts);
+    step.linkSystemLibrary2("freetype", dynamic_link_opts);
+    step.linkSystemLibrary2("bz2", dynamic_link_opts);
+    step.linkSystemLibrary2("png16", dynamic_link_opts);
+    step.linkSystemLibrary2("harfbuzz", dynamic_link_opts);
+    step.linkSystemLibrary2("m", dynamic_link_opts);
+    step.linkSystemLibrary2("usp10", dynamic_link_opts);
+    step.linkSystemLibrary2("gdi32", dynamic_link_opts);
+    step.linkSystemLibrary2("rpcrt4", dynamic_link_opts);
+    step.linkSystemLibrary2("graphite2", dynamic_link_opts);
+    step.linkSystemLibrary2("brotlidec", dynamic_link_opts);
+    step.linkSystemLibrary2("brotlicommon", dynamic_link_opts);
+    step.linkSystemLibrary2("pixman-1", dynamic_link_opts);
+    step.linkSystemLibrary2("vulkan-1.dll", dynamic_link_opts);
+    step.linkSystemLibrary2("graphene-1.0", dynamic_link_opts);
+    step.linkSystemLibrary2("gio-2.0", dynamic_link_opts);
+    step.linkSystemLibrary2("intl", dynamic_link_opts);
+    step.linkSystemLibrary2("shlwapi", dynamic_link_opts);
+    step.linkSystemLibrary2("dnsapi", dynamic_link_opts);
+    step.linkSystemLibrary2("iphlpapi", dynamic_link_opts);
+    step.linkSystemLibrary2("ws2_32", dynamic_link_opts);
+    step.linkSystemLibrary2("gobject-2.0", dynamic_link_opts);
+    step.linkSystemLibrary2("intl", dynamic_link_opts);
+    step.linkSystemLibrary2("ffi", dynamic_link_opts);
+    step.linkSystemLibrary2("gmodule-2.0", dynamic_link_opts);
+    step.linkSystemLibrary2("glib-2", dynamic_link_opts);
+    step.linkSystemLibrary2("intl", dynamic_link_opts);
+    step.linkSystemLibrary2("ws2_32", dynamic_link_opts);
+    step.linkSystemLibrary2("ole32", dynamic_link_opts);
+    step.linkSystemLibrary2("winmm", dynamic_link_opts);
+    step.linkSystemLibrary2("shlwapi", dynamic_link_opts);
+    step.linkSystemLibrary2("uuid", dynamic_link_opts);
+    step.linkSystemLibrary2("pcre2-8", dynamic_link_opts);
+    step.linkSystemLibrary2("iconv", dynamic_link_opts);
+    step.linkSystemLibrary2("appstream.dll", dynamic_link_opts);
+    
     // Freetype
     _ = b.systemIntegrationOption("freetype", .{}); // Shows it in help
     if (config.font_backend.hasFreetype()) {
@@ -1282,9 +1360,9 @@ fn addDeps(
     step.linkLibC();
     step.addIncludePath(b.path("src/stb"));
     step.addCSourceFiles(.{ .files = &.{"src/stb/stb.c"} });
-    if (step.rootModuleTarget().os.tag == .linux) {
+    // if (step.rootModuleTarget().os.tag == .linux) {
         step.addIncludePath(b.path("src/apprt/gtk"));
-    }
+    // }
 
     // C++ files
     step.linkLibCpp();
