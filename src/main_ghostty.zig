@@ -177,7 +177,7 @@ pub const std_options: std.Options = .{
 // What's this?
 pub usingnamespace if (@hasDecl(apprt.runtime, "panic")) struct {
     pub const panic = apprt.runtime.panic;
-} else struct { };
+} else struct {};
 
 test {
     _ = @import("pty.zig");

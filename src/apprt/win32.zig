@@ -35,9 +35,11 @@ const win32fix = struct {
     ) callconv(windows.WINAPI) ?win32.HCURSOR;
 };
 
-const c = @cImport({
-    @cInclude("GhosttyResourceNames.h");
-});
+// const c = @cImport({
+//     @cInclude("GhosttyResourceNames.h");
+// });
+
+const c = .{ .ID_ICON_GHOSTTY = 1 };
 
 const HWND = win32.HWND;
 const HDC = win32.HDC;
@@ -91,8 +93,6 @@ pub const App = struct {
                 .hIconSm = null,
             };
             if (0 == win32.RegisterClassExW(&wc)) {
-                const err = win32.GetLastError();
-                log.err("RegisterClassEx for app window failed with error {}", .{err});
                 panicLastMessage("RegisterClassEx for app window failed");
             }
         }
@@ -103,8 +103,8 @@ pub const App = struct {
             .{}, // style
             0,
             0, // position
-            0,
-            0, // size
+            800,
+            600, // size
             win32.HWND_MESSAGE, // parent window
             null, // menu bar
             null, // hInstance
@@ -128,6 +128,7 @@ pub const App = struct {
 
     /// Doesn't return until the app has exited
     pub fn run(app: *App) !void {
+        app.oncreate();
         app.wakeup();
         // WARNING:
         // Be careful about modifying this loop because it can be circumvented
@@ -135,8 +136,10 @@ pub const App = struct {
         // You can use the message-only app window for app-level customizations.
         while (true) {
             var msg: win32.MSG = undefined;
-            if (0 == win32.GetMessageW(&msg, null, 0, 0))
+            if (0 == win32.GetMessageW(&msg, null, 0, 0)) {
+                log.err("it should not exit", .{});
                 break;
+            }
             _ = win32.TranslateMessage(&msg);
             _ = win32.DispatchMessageW(&msg);
         }
@@ -150,11 +153,27 @@ pub const App = struct {
             panicLastMessage("UnregisterClass failed");
     }
 
-    pub fn newWindow(app: *App, parent_: ?*CoreSurface) !void {
-        _ = try app.newSurface(parent_);
+    // pub fn newWindow(app: *App, parent_: ?*CoreSurface) !void {
+    //     _ = try app.newSurface(parent_);
+    // }
+
+    // fn newSurface(app: *App, _: ?*CoreSurface) !*Surface {
+    //     // Grab a surface allocation because we're going to need it.
+    //     var surface = try app.app.alloc.create(Surface);
+    //     errdefer app.app.alloc.destroy(surface);
+
+    //     // Create the surface -- because windows are surfaces for glfw.
+    //     try surface.init(app);
+    //     errdefer surface.deinit();
+
+    //     return surface;
+    // }
+
+    pub fn newWindow(app: *App) !void {
+        _ = try app.newSurface();
     }
 
-    fn newSurface(app: *App, _: ?*CoreSurface) !*Surface {
+    fn newSurface(app: *App) !*Surface {
         // Grab a surface allocation because we're going to need it.
         var surface = try app.app.alloc.create(Surface);
         errdefer app.app.alloc.destroy(surface);
@@ -205,6 +224,11 @@ pub const App = struct {
     /// Wakeup the event loop. This should be able to be called from any thread.
     pub fn wakeup(app: *const App) void {
         if (0 == win32.PostMessageW(app.hwnd, WM_GHOSTTY_WAKEUP, 0, 0))
+            panicLastMessage("PostMessage for app tick failed");
+    }
+
+    fn oncreate(app: *const App) void {
+        if (0 == win32.PostMessageW(app.hwnd, WM_GHOST_CREATE, 0, 0))
             panicLastMessage("PostMessage for app tick failed");
     }
 
@@ -262,7 +286,8 @@ pub const App = struct {
     }
 };
 
-const WM_GHOSTTY_WAKEUP = win32.WM_USER + 0;
+const WM_GHOST_CREATE = win32.WM_USER + 1;
+const WM_GHOSTTY_WAKEUP = WM_GHOST_CREATE + 1;
 
 fn AppWndProc(
     hwnd: HWND,
@@ -274,7 +299,14 @@ fn AppWndProc(
         win32.WM_CREATE => {
             const data: *win32.CREATESTRUCTW = @ptrFromInt(@as(usize, @bitCast(lParam)));
             if (0 != setWindowLongPtr(hwnd, 0, @intFromPtr(data.lpCreateParams))) unreachable;
+
             return 0;
+        },
+        WM_GHOST_CREATE => {
+            const app: *App = @ptrFromInt(getWindowLongPtr(hwnd, 0));
+            app.newWindow() catch |err| {
+                std.debug.panic("newWindow failed with {s}", .{@errorName(err)});
+            };
         },
         WM_GHOSTTY_WAKEUP => {
             const app: *App = @ptrFromInt(getWindowLongPtr(hwnd, 0));
@@ -284,7 +316,12 @@ fn AppWndProc(
                 win32.PostQuitMessage(0);
             }
         },
-        else => {},
+        win32.WM_CLOSE => {
+            log.info("Unhandled uMsg {any}", .{uMsg});
+        },
+        else => {
+            log.info("Unhandled uMsg {any}", .{uMsg});
+        },
     }
     return win32.DefWindowProcW(hwnd, uMsg, wParam, lParam);
 }
@@ -322,8 +359,9 @@ pub const Surface = struct {
             .hIconSm = icons.small,
         };
 
-        if (0 == win32.RegisterClassExW(&wc))
+        if (0 == win32.RegisterClassExW(&wc)) {
             panicLastMessage("Failed to Register Class");
+        }
 
         const hwnd = win32.CreateWindowExW(
             .{},
@@ -496,6 +534,15 @@ pub const Surface = struct {
         _ = self;
         _ = width;
         _ = height;
+    }
+
+    pub fn supportsClipboard(
+        self: *const Surface,
+        clipboard_type: apprt.Clipboard,
+    ) bool {
+        _ = self;
+        _ = clipboard_type;
+        return false;
     }
 
     /// Start an async clipboard request.
@@ -712,7 +759,7 @@ fn wmKey(hwnd: HWND, wParam: win32.WPARAM, lParam: win32.LPARAM, action: input.A
                 const off = vk - '0';
                 break :blk .{
                     .key = @enumFromInt(@intFromEnum(input.Key.zero) + off),
-                    .utf8 = if (mods.shift) &.{ numberKeySymbol(off) } else &.{'0' + off},
+                    .utf8 = if (mods.shift) &.{numberKeySymbol(off)} else &.{'0' + off},
                 };
             },
             inline @intFromEnum(win32.VK_A)...@intFromEnum(win32.VK_Z) => |vk| {
@@ -842,6 +889,7 @@ fn wmMouseButton(
     const surface: *Surface = @ptrFromInt(getWindowLongPtr(hwnd, 0));
     surface.core_surface.cursorPosCallback(
         cursorPosFromLParamClient(lParam),
+        null,
     ) catch |err| std.debug.panic(
         "cursorPosCallback failed with {s}",
         .{@errorName(err)},
@@ -853,7 +901,7 @@ fn wmMouseButton(
     if (0 == win32.GetKeyboardState(&keyboard_state))
         panicLastMessage("GetKeyboardState failed");
     const mods = modsFromKeyboardState(&keyboard_state);
-    surface.core_surface.mouseButtonCallback(
+    _ = surface.core_surface.mouseButtonCallback(
         action,
         button,
         mods,
@@ -872,6 +920,7 @@ fn wmMouseWheel(
     const surface: *Surface = @ptrFromInt(getWindowLongPtr(hwnd, 0));
     surface.core_surface.cursorPosCallback(
         cursorPosFromLParamScreen(hwnd, lParam),
+        null,
     ) catch |err| std.debug.panic(
         "cursorPosCallback failed with {s}",
         .{@errorName(err)},
@@ -904,6 +953,7 @@ fn SurfaceWndProc(
             const surface: *Surface = @ptrFromInt(getWindowLongPtr(hwnd, 0));
             surface.core_surface.cursorPosCallback(
                 cursorPosFromLParamClient(lParam),
+                null,
             ) catch |err| std.debug.panic(
                 "cursorPosCallback failed with {s}",
                 .{@errorName(err)},
@@ -1050,4 +1100,3 @@ fn getIcons() Icons {
     }
     return .{ .small = @ptrCast(small), .large = @ptrCast(large) };
 }
-
