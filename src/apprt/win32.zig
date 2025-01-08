@@ -73,6 +73,8 @@ pub const App = struct {
     // see https://devblogs.microsoft.com/oldnewthing/20050426-18/?p=35783
     hwnd: HWND,
 
+    should_quit: bool = false,
+
     pub const Options = struct {};
 
     const WND_CLASS_NAME = Utf8To16("AppMessageOnly");
@@ -239,11 +241,15 @@ pub const App = struct {
         comptime action: apprt.Action.Key,
         value: apprt.Action.Value(action),
     ) !void {
-        _ = self;
+        // _ = self;
         _ = target;
         _ = value;
         switch (action) {
             .new_window => {
+                log.info("implemented action={}", .{action});
+            },
+            .quit => {
+                self.should_quit = true;
                 log.info("implemented action={}", .{action});
             },
             .new_tab,
@@ -310,13 +316,14 @@ fn AppWndProc(
         },
         WM_GHOSTTY_WAKEUP => {
             const app: *App = @ptrFromInt(getWindowLongPtr(hwnd, 0));
-            const should_quit = app.app.tick(app) catch |err|
-                std.debug.panic("app tick failed with {s}", .{@errorName(err)});
+            const should_quit = app.should_quit;
             if (should_quit or app.app.surfaces.items.len == 0) {
                 win32.PostQuitMessage(0);
             }
         },
         win32.WM_CLOSE => {
+            const app: *App = @ptrFromInt(getWindowLongPtr(hwnd, 0));
+            app.should_quit = true;
             log.info("Unhandled uMsg {any}", .{uMsg});
         },
         else => {
